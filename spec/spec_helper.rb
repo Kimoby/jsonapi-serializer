@@ -8,6 +8,7 @@ unless RUBY_ENGINE == 'truffleruby'
 end
 
 require 'active_support'
+require "active_support/core_ext/object"
 require 'active_support/core_ext/object/json'
 require 'jsonapi/serializer'
 require 'ffaker'
