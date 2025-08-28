@@ -45,7 +45,15 @@ module FastJsonapi
         empty_case = relationship_type == :has_many ? [] : nil
 
         output_hash[key] = {}
-        output_hash[key][:data] = ids_hash_from_record_and_relationship(record, serialization_params) || empty_case unless lazy_load_data && !included
+        
+        # Always serialize :data when relationship is included, even for lazy_load_data relationships
+        should_serialize_data = included || !lazy_load_data
+        
+        if should_serialize_data
+          data_result = ids_hash_from_record_and_relationship(record, serialization_params)
+          output_hash[key][:data] = data_result || empty_case
+        else
+        end
 
         add_meta_hash(record, serialization_params, output_hash) if meta.present?
         add_links_hash(record, serialization_params, output_hash) if links.present?
@@ -108,6 +116,11 @@ module FastJsonapi
       return unless associated_object = fetch_associated_object(record, params)
 
       if associated_object.respond_to? :map
+        # Check if collection is empty to avoid strict loading violations on empty associations
+        if associated_object.respond_to?(:empty?) && associated_object.empty?
+          return []
+        end
+        
         return associated_object.map do |object|
           id_hash_from_record object, params
         end
