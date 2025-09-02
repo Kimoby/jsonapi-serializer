@@ -62,7 +62,11 @@ module FastJsonapi
           
           # For recursive relationships, also check against the original includes list
           original_includes = params[:__original_includes] || []
-          originally_included = original_includes.any? { |include_item| include_item.to_s.start_with?("#{key}.") || include_item.to_s == key.to_s }
+          originally_included = original_includes.any? { |include_item| 
+            item_str = include_item.to_s
+            # Check if this relationship key appears anywhere in the original include paths
+            item_str == key.to_s || item_str.start_with?("#{key}.") || item_str.end_with?(".#{key}")
+          }
           
           included = directly_included || originally_included
           relationship.serialize(record, included, params, hash)
