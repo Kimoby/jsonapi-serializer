@@ -57,7 +57,14 @@ module FastJsonapi
         relationships = {} if fieldset == []
 
         relationships.each_with_object({}) do |(key, relationship), hash|
-          included = includes_list.present? && (includes_list.include?(key) || includes_list.any? { |include_item| include_item.to_s.start_with?("#{key}.") })
+          # Check if relationship is included based on direct inclusion or subset of include paths
+          directly_included = includes_list.present? && (includes_list.include?(key) || includes_list.any? { |include_item| include_item.to_s.start_with?("#{key}.") })
+          
+          # For recursive relationships, also check against the original includes list
+          original_includes = params[:__original_includes] || []
+          originally_included = original_includes.any? { |include_item| include_item.to_s.start_with?("#{key}.") || include_item.to_s == key.to_s }
+          
+          included = directly_included || originally_included
           relationship.serialize(record, included, params, hash)
         end
       end
@@ -201,7 +208,10 @@ module FastJsonapi
             known_included_objects << code
 
             new_includes_list = parse_includes_list(include_item.last)
-            included_records << serializer.record_hash(inc_obj, fieldsets[record_type], new_includes_list, params)
+            # Pass the original includes list to help with recursive relationship detection
+            original_includes = params[:__original_includes] || includes_list
+            include_params = params.merge(__original_includes: original_includes)
+            included_records << serializer.record_hash(inc_obj, fieldsets[record_type], new_includes_list, include_params)
           end
         end
       end
