@@ -45,7 +45,13 @@ module FastJsonapi
         empty_case = relationship_type == :has_many ? [] : nil
 
         output_hash[key] = {}
-        output_hash[key][:data] = ids_hash_from_record_and_relationship(record, serialization_params) || empty_case unless lazy_load_data && !included
+        unless lazy_load_data && !included
+          data_result = ids_hash_from_record_and_relationship(record, serialization_params)
+          output_hash[key][:data] = data_result || empty_case
+          puts "DEBUG: Relationship #{key}, included=#{included}, lazy_load_data=#{lazy_load_data}, data_result=#{data_result.inspect}, empty_case=#{empty_case.inspect}, final_data=#{output_hash[key][:data].inspect}"
+        else
+          puts "DEBUG: SKIPPING data for Relationship #{key}, included=#{included}, lazy_load_data=#{lazy_load_data}"
+        end
 
         add_meta_hash(record, serialization_params, output_hash) if meta.present?
         add_links_hash(record, serialization_params, output_hash) if links.present?
