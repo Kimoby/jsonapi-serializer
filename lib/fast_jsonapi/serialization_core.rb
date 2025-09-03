@@ -67,7 +67,6 @@ module FastJsonapi
       end
 
       def record_hash(record, fieldset, includes_list, params = {})
-        # Parse includes list to get the root relationship keys that should be included
         # includes_list might be raw array like [:'comments.author'] or already parsed hash like {author: Set.new([])}
         parsed_includes = if includes_list.present?
           includes_list.is_a?(Hash) ? includes_list.keys : parse_includes_list(includes_list).keys
