@@ -57,7 +57,7 @@ module FastJsonapi
         relationships = {} if fieldset == []
 
         relationships.each_with_object({}) do |(key, relationship), hash|
-          included = includes_list.present? && (includes_list.include?(key) || includes_list.any? { |include_item| include_item.to_s.start_with?("#{key}.") })
+          included = includes_list.present? && includes_list.include?(key)
           relationship.serialize(record, included, params, hash)
         end
       end

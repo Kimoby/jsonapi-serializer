@@ -52,7 +52,6 @@ module FastJsonapi
         if should_serialize_data
           data_result = ids_hash_from_record_and_relationship(record, serialization_params)
           output_hash[key][:data] = data_result || empty_case
-        else
         end
 
         add_meta_hash(record, serialization_params, output_hash) if meta.present?
