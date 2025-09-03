@@ -204,7 +204,7 @@ module FastJsonapi
             # If new_includes_list is empty, we're at a leaf level of the include path
             # but we still need to mark the final relationship as included so it serializes data
             # For example: with 'mpi_categories.sub_categories', when processing an included mpi_category,
-            # its sub_categories relationship should be included=true to serialize data
+            # its sub_categories relationship should be considered as included to serialize the data key.
             if new_includes_list.empty?
               # The include_item.first is the relationship name that should be included
               relationship_key = include_item.first
