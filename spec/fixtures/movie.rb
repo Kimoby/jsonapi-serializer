@@ -106,6 +106,17 @@ class MovieSerializer
   end
 end
 
+class MovieSerializerWithLazy
+  include JSONAPI::Serializer
+
+  set_type :movie
+
+  attributes :name
+  
+  has_many :actors, lazy_load_data: true, serializer: ActorSerializer
+  belongs_to :owner, lazy_load_data: true, serializer: UserSerializer
+end
+
 module Cached
   class MovieSerializer < ::MovieSerializer
     cache_options(

@@ -67,20 +67,27 @@ module FastJsonapi
       end
 
       def record_hash(record, fieldset, includes_list, params = {})
+        # includes_list might be raw array like [:'comments.author'] or already parsed hash like {author: Set.new([])}
+        parsed_includes = if includes_list.present?
+          includes_list.is_a?(Hash) ? includes_list.keys : parse_includes_list(includes_list).keys
+        else
+          []
+        end
+        
         if cache_store_instance
           cache_opts = record_cache_options(cache_store_options, fieldset, includes_list, params)
           record_hash = cache_store_instance.fetch(record, **cache_opts) do
             temp_hash = id_hash(id_from_record(record, params), record_type, true)
             temp_hash[:attributes] = attributes_hash(record, fieldset, params) if attributes_to_serialize.present?
-            temp_hash[:relationships] = relationships_hash(record, cachable_relationships_to_serialize, fieldset, includes_list, params) if cachable_relationships_to_serialize.present?
+            temp_hash[:relationships] = relationships_hash(record, cachable_relationships_to_serialize, fieldset, parsed_includes, params) if cachable_relationships_to_serialize.present?
             temp_hash[:links] = links_hash(record, params) if data_links.present?
             temp_hash
           end
-          record_hash[:relationships] = (record_hash[:relationships] || {}).merge(relationships_hash(record, uncachable_relationships_to_serialize, fieldset, includes_list, params)) if uncachable_relationships_to_serialize.present?
+          record_hash[:relationships] = (record_hash[:relationships] || {}).merge(relationships_hash(record, uncachable_relationships_to_serialize, fieldset, parsed_includes, params)) if uncachable_relationships_to_serialize.present?
         else
           record_hash = id_hash(id_from_record(record, params), record_type, true)
           record_hash[:attributes] = attributes_hash(record, fieldset, params) if attributes_to_serialize.present?
-          record_hash[:relationships] = relationships_hash(record, nil, fieldset, includes_list, params) if relationships_to_serialize.present?
+          record_hash[:relationships] = relationships_hash(record, nil, fieldset, parsed_includes, params) if relationships_to_serialize.present?
           record_hash[:links] = links_hash(record, params) if data_links.present?
         end
 
@@ -192,8 +199,18 @@ module FastJsonapi
             next if known_included_objects.include?(code)
 
             known_included_objects << code
-
             new_includes_list = parse_includes_list(include_item.last)
+            
+            # If new_includes_list is empty, we're at a leaf level of the include path
+            # but we still need to mark the final relationship as included so it serializes data
+            # For example: with 'mpi_categories.sub_categories', when processing an included mpi_category,
+            # its sub_categories relationship should be considered as included to serialize the data key.
+            if new_includes_list.empty?
+              # The include_item.first is the relationship name that should be included
+              relationship_key = include_item.first
+              new_includes_list[relationship_key] = Set.new
+            end
+            
             included_records << serializer.record_hash(inc_obj, fieldsets[record_type], new_includes_list, params)
           end
         end

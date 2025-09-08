@@ -142,5 +142,51 @@ RSpec.describe JSONAPI::Serializer do
         end
       end
     end
+
+    context 'with lazy_load_data' do
+      let(:movie_with_lazy) do
+        mov = Movie.fake
+        mov.actors = rand(2..5).times.map { Actor.fake }
+        mov.owner = User.fake
+        mov
+      end
+
+      context 'when relationship is included in nested path' do
+        let(:params) do
+          { include: ['actors.played_movies'] }
+        end
+        let(:serialized) do
+          MovieSerializerWithLazy.new(movie_with_lazy, params).serializable_hash.as_json
+        end
+
+        it 'serializes data for lazy_load_data relationships when included' do
+          # The top-level actors relationship should have data since it's part of the include path
+          expect(serialized['data']['relationships']['actors']).to have_key('data')
+          expect(serialized['data']['relationships']['actors']['data']).to be_an(Array)
+          
+          # Included actors should have their played_movies relationship with data
+          movie_with_lazy.actors.each do |actor|
+            included_actor = serialized['included'].find { |inc| inc['type'] == 'actor' && inc['id'] == actor.uid }
+            expect(included_actor['relationships']['played_movies']).to have_key('data')
+          end
+        end
+      end
+
+      context 'when relationship has no data' do
+        let(:empty_movie) do
+          mov = Movie.fake
+          mov.actors = []
+          mov
+        end
+        let(:serialized) do
+          MovieSerializerWithLazy.new(empty_movie, { include: ['actors'] }).serializable_hash.as_json
+        end
+
+        it 'serializes empty data for included empty relationships' do
+          expect(serialized['data']['relationships']['actors']).to have_key('data')
+          expect(serialized['data']['relationships']['actors']['data']).to eq([])
+        end
+      end
+    end
   end
 end
